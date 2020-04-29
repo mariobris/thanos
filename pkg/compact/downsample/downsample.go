@@ -139,7 +139,11 @@ func Downsample(
 		} else {
 			// Downsample a block that contains aggregated chunks already.
 			for _, c := range chks {
-				aggrChunks = append(aggrChunks, c.Chunk.(*AggrChunk))
+				ac, ok := c.Chunk.(*AggrChunk)
+				if !ok {
+					return id, errors.Errorf("expected downsampled chunk (*downsample.AggrChunk) got %T instead for series: %d", c.Chunk, postings.At())
+				}
+				aggrChunks = append(aggrChunks, ac)
 			}
 			downsampledChunks, err := downsampleAggr(
 				aggrChunks,
@@ -561,6 +565,7 @@ type sample struct {
 // comparison between the last raw value of the earlier chunk and the first raw
 // value of the later chunk ensures that counter resets between chunks are
 // recognized and that the correct value delta is calculated.
+// NOTE: It handles overlapped chunks.
 type CounterSeriesIterator struct {
 	chks   []chunkenc.Iterator
 	i      int     // Current chunk.
